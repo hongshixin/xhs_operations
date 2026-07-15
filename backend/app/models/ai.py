@@ -23,6 +23,8 @@ class ModelConfig(Base):
     provider: Mapped[str] = mapped_column(String(64))
     model_name: Mapped[str] = mapped_column(String(128), default="")
     base_url: Mapped[str] = mapped_column(Text, default="")
+    api_path: Mapped[str] = mapped_column(Text, default="")
+    api_format: Mapped[str] = mapped_column(String(32), default="openai")
     encrypted_api_key: Mapped[str] = mapped_column(Text, default="")
     is_default: Mapped[bool] = mapped_column(Boolean, default=False)
 

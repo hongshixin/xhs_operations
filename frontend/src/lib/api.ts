@@ -610,6 +610,11 @@ export async function testModelConfig(configId: number): Promise<{ id: number; s
   return response.data;
 }
 
+export async function revealModelConfigKey(configId: number): Promise<{ api_key: string }> {
+  const response = await http.post<{ api_key: string }>(`/model-configs/${configId}/reveal-key`);
+  return response.data;
+}
+
 export async function deleteModelConfig(configId: number): Promise<{ id: number; status: string }> {
   const response = await http.delete<{ id: number; status: string }>(`/model-configs/${configId}`);
   return response.data;

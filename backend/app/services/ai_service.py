@@ -140,7 +140,8 @@ class OpenAICompatibleTextClient:
         if not api_key:
             raise ValueError("Text model api_key is required")
 
-        endpoint = f"{model_config.base_url.rstrip('/')}/chat/completions"
+        api_path = model_config.api_path or '/v1/chat/completions'
+        endpoint = f"{model_config.base_url.rstrip('/')}/{api_path.lstrip('/')}"
         response = requests.post(
             endpoint,
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
@@ -292,21 +293,17 @@ class OpenAICompatibleImageClient:
         prompt: str,
         reference_images: list[str] | None = None,
     ) -> dict[str, Any]:
+        from backend.app.services.image_strategies import get_strategy
+
         self._validate(model_config=model_config, api_key=api_key)
-        endpoint = f"{model_config.base_url.rstrip('/')}/images/generations"
-        body: dict[str, Any] = {
-            "model": model_config.model_name,
-            "prompt": prompt,
-            "response_format": "url",
-        }
-        if reference_images:
-            resolved = [self._resolve_image_ref(url) for url in reference_images]
-            if len(resolved) == 1:
-                body["image"] = resolved[0]
-            else:
-                body["image"] = resolved
-                body["sequential_image_generation"] = "disabled"
-            body["watermark"] = False
+        strategy = get_strategy(model_config.api_format)
+        api_path = model_config.api_path or strategy.default_api_path
+        endpoint = f"{model_config.base_url.rstrip('/')}/{api_path.lstrip('/')}"
+        body = strategy.build_request(
+            model_name=model_config.model_name,
+            prompt=prompt,
+            reference_images=reference_images,
+        )
         try:
             response = requests.post(
                 endpoint,
@@ -323,32 +320,7 @@ class OpenAICompatibleImageClient:
             except Exception:
                 pass
             raise ValueError(f"图片生成失败: {detail or exc}") from exc
-        payload = _load_json_response(response)
-        try:
-            item = payload["data"][0]
-        except (KeyError, IndexError, TypeError) as exc:
-            raise ValueError("Image response missing data[0]") from exc
-        image_ref = item.get("url") or item.get("b64_json")
-        if not isinstance(image_ref, str) or not image_ref:
-            raise ValueError("Image response missing url or b64_json")
-        return {"url": image_ref, "raw": payload}
-
-    @staticmethod
-    def _resolve_image_ref(url: str) -> str:
-        if url.startswith("http://") or url.startswith("https://"):
-            return url
-        if url.startswith("/api/files/media/"):
-            import base64
-            from pathlib import Path
-            from backend.app.core.config import get_settings
-            file_name = url.split("/")[-1]
-            local = Path(get_settings().storage_dir) / "media" / file_name
-            if local.is_file():
-                raw = local.read_bytes()
-                ext = local.suffix.lower().lstrip(".")
-                mime = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "gif": "image/gif", "webp": "image/webp"}.get(ext, "image/png")
-                return f"data:{mime};base64,{base64.b64encode(raw).decode()}"
-        return url
+        return strategy.parse_response(_load_json_response(response))
 
     def describe_image(
         self,
@@ -359,7 +331,8 @@ class OpenAICompatibleImageClient:
         instruction: str,
     ) -> str:
         self._validate(model_config=model_config, api_key=api_key)
-        endpoint = f"{model_config.base_url.rstrip('/')}/chat/completions"
+        api_path = model_config.api_path or '/v1/chat/completions'
+        endpoint = f"{model_config.base_url.rstrip('/')}/{api_path.lstrip('/')}"
         response = requests.post(
             endpoint,
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},

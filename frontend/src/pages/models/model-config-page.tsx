@@ -35,6 +35,7 @@ import {
   createModelConfig,
   deleteModelConfig,
   fetchModelConfigs,
+  revealModelConfigKey,
   setDefaultModelConfig,
   testModelConfig,
   updateModelConfig,
@@ -49,6 +50,8 @@ const emptyForm: ModelConfigPayload = {
   provider: "openai-compatible",
   model_name: "gpt-5.4",
   base_url: "",
+  api_path: "",
+  api_format: "openai",
   api_key: "",
   is_default: true,
 };
@@ -77,6 +80,8 @@ export function ModelConfigPage() {
   const [error, setError] = useState<string | null>(null);
   const [testingId, setTestingId] = useState<number | null>(null);
   const [testResults, setTestResults] = useState<Record<number, { status: string; message: string }>>({});
+  const [hasExistingKey, setHasExistingKey] = useState(false);
+  const [clearApiKey, setClearApiKey] = useState(false);
 
   const grouped = useMemo(
     () => ({
@@ -109,22 +114,35 @@ export function ModelConfigPage() {
     setIsSaving(true);
     setMessage(null);
     setError(null);
-    const payload = {
+    const payload: Record<string, unknown> = {
       ...form,
       name: form.name.trim(),
       model_name: form.model_name.trim(),
       provider: form.provider.trim(),
       base_url: form.base_url.trim(),
-      api_key: form.api_key.trim(),
+      api_path: form.api_path.trim(),
+      api_format: form.api_format,
     };
+    if (editingId) {
+      if (clearApiKey) {
+        payload.clear_api_key = true;
+      } else if (form.api_key.trim()) {
+        payload.api_key = form.api_key.trim();
+      }
+      // omit api_key if empty and not clearing — backend keeps existing key
+    } else {
+      payload.api_key = form.api_key.trim();
+    }
     try {
       if (editingId) {
         const updated = await updateModelConfig(editingId, payload);
         setConfigs((current) => current.map((c) => c.id === updated.id ? updated : (updated.is_default && c.model_type === updated.model_type ? { ...c, is_default: false } : c)));
         setMessage(`${typeLabel(updated.model_type)}配置已更新。`);
         setEditingId(null);
+        setHasExistingKey(false);
+        setClearApiKey(false);
       } else {
-        const created = await createModelConfig(payload);
+        const created = await createModelConfig(payload as ModelConfigPayload);
         setConfigs((current) => {
           const withoutOldDefault = created.is_default
             ? current.map((config) => config.model_type === created.model_type ? { ...config, is_default: false } : config)
@@ -141,7 +159,7 @@ export function ModelConfigPage() {
     }
   }
 
-  function handleEdit(config: ModelConfig) {
+  async function handleEdit(config: ModelConfig) {
     setEditingId(config.id);
     setForm({
       name: config.name,
@@ -149,16 +167,31 @@ export function ModelConfigPage() {
       provider: config.provider,
       model_name: config.model_name,
       base_url: config.base_url,
+      api_path: config.api_path,
+      api_format: config.api_format,
       api_key: "",
       is_default: config.is_default,
     });
+    setHasExistingKey(config.has_api_key);
+    setClearApiKey(false);
     setMessage(null);
     setError(null);
+
+    if (config.has_api_key) {
+      try {
+        const result = await revealModelConfigKey(config.id);
+        setForm((current) => ({ ...current, api_key: result.api_key }));
+      } catch {
+        // key reveal failed, leave field empty
+      }
+    }
   }
 
   function handleCancelEdit() {
     setEditingId(null);
     setForm({ ...emptyForm, model_type: form.model_type });
+    setHasExistingKey(false);
+    setClearApiKey(false);
   }
 
   async function handleDelete(configId: number) {
@@ -233,9 +266,9 @@ export function ModelConfigPage() {
         style={{ marginBottom: 16 }}
         message="推荐的 OpenAI 兼容 API 服务"
         description={<>
-          <Typography.Link href="https://api.openai-next.com/" target="_blank" rel="noreferrer">api.openai-next.com</Typography.Link> — OpenAI 中转，Base URL: <Typography.Text code>https://api.openai-next.com/v1</Typography.Text><br />
-          <Typography.Link href="https://www.volcengine.com/product/doubao" target="_blank" rel="noreferrer">火山引擎（豆包）</Typography.Link> — 字节跳动大模型平台，Base URL: <Typography.Text code>https://ark.cn-beijing.volces.com/api/v3</Typography.Text><br />
-          <Typography.Link href="https://bailian.console.aliyun.com/" target="_blank" rel="noreferrer">阿里云百炼</Typography.Link> — 通义千问系列，Base URL: <Typography.Text code>https://dashscope.aliyuncs.com/compatible-mode/v1</Typography.Text>
+          <Typography.Link href="https://api.openai-next.com/" target="_blank" rel="noreferrer">api.openai-next.com</Typography.Link> — OpenAI 中转，Host: <Typography.Text code>https://api.openai-next.com</Typography.Text>，接口路径: <Typography.Text code>/v1</Typography.Text><br />
+          <Typography.Link href="https://www.volcengine.com/product/doubao" target="_blank" rel="noreferrer">火山引擎（豆包）</Typography.Link> — 字节跳动大模型平台，Host: <Typography.Text code>https://ark.cn-beijing.volces.com</Typography.Text>，接口路径: <Typography.Text code>/api/v3</Typography.Text><br />
+          <Typography.Link href="https://bailian.console.aliyun.com/" target="_blank" rel="noreferrer">阿里云百炼</Typography.Link> — 通义千问系列，Host: <Typography.Text code>https://dashscope.aliyuncs.com</Typography.Text>，接口路径: <Typography.Text code>/compatible-mode/v1</Typography.Text>
         </>}
       />
 
@@ -301,7 +334,7 @@ export function ModelConfigPage() {
                     placeholder="例如：默认文本模型"
                   />
                 </Form.Item>
-                <Alert message="所有模型需兼容 OpenAI 接口规范" type="info" style={{ marginBottom: 16, fontSize: 12 }} />
+                <Alert message="填写 Host 和 API Path 共同组成完整的接口地址，例如 https://grsai.dakka.com.cn/v1/api/generate" type="info" style={{ marginBottom: 16, fontSize: 12 }} />
                 <Form.Item label="模型名称">
                   <Input
                     value={form.model_name}
@@ -316,7 +349,7 @@ export function ModelConfigPage() {
                     }
                   />
                 </Form.Item>
-                <Form.Item label="Base URL">
+                <Form.Item label="Host">
                   <Input
                     value={form.base_url}
                     onChange={(e) =>
@@ -325,20 +358,61 @@ export function ModelConfigPage() {
                         base_url: e.target.value,
                       }))
                     }
-                    placeholder="https://api.example.com/v1"
+                    placeholder="https://api.example.com"
                   />
                 </Form.Item>
-                <Form.Item label="API Key">
-                  <Input.Password
-                    value={form.api_key}
+                <Form.Item label="接口路径" extra={<Text type="secondary" style={{ fontSize: 12 }}>留空则文本模型默认 /v1/chat/completions，图片模型默认 /v1/images/generations</Text>}>
+                  <Input
+                    value={form.api_path}
                     onChange={(e) =>
                       setForm((current) => ({
                         ...current,
-                        api_key: e.target.value,
+                        api_path: e.target.value,
                       }))
                     }
-                    placeholder="保存后只显示是否已配置"
+                    placeholder="留空使用默认路径"
                   />
+                </Form.Item>
+                <Form.Item label="API 格式">
+                  <Segmented
+                    value={form.api_format}
+                    options={[
+                      { label: "OpenAI", value: "openai" },
+                      { label: "GrsAI", value: "grsai" },
+                    ]}
+                    onChange={(val) =>
+                      setForm((current) => ({
+                        ...current,
+                        api_format: val as "openai" | "grsai",
+                      }))
+                    }
+                    block
+                  />
+                </Form.Item>
+                <Form.Item label="API Key" extra={hasExistingKey && editingId ? '当前已配置 API Key，留空则保持不变' : undefined}>
+                  <Space.Compact style={{ width: '100%' }}>
+                    <Input.Password
+                      value={form.api_key}
+                      onChange={(e) =>
+                        setForm((current) => ({
+                          ...current,
+                          api_key: e.target.value,
+                        }))
+                      }
+                      placeholder={hasExistingKey ? '已配置 API Key，输入新值以替换' : '保存后只显示是否已配置'}
+                    />
+                    {hasExistingKey && editingId && (
+                      <Button
+                        danger
+                        onClick={() => {
+                          setForm((current) => ({ ...current, api_key: '' }));
+                          setClearApiKey(true);
+                        }}
+                      >
+                        清除
+                      </Button>
+                    )}
+                  </Space.Compact>
                 </Form.Item>
                 <Form.Item>
                   <Checkbox
@@ -443,8 +517,16 @@ export function ModelConfigPage() {
                               type="secondary"
                               style={{ fontSize: 12, marginRight: 12 }}
                             >
-                              {config.base_url || "未配置 Base URL"}
+                              {config.base_url || "未配置 Host"}
                             </Text>
+                            <Tag color={config.api_format === "grsai" ? "purple" : "blue"} style={{ marginRight: 8 }}>
+                              {config.api_format === "grsai" ? "GrsAI" : "OpenAI"}
+                            </Tag>
+                            {config.api_path && (
+                              <Text type="secondary" style={{ fontSize: 12, marginRight: 12 }}>
+                                {config.api_path}
+                              </Text>
+                            )}
                             <Text
                               type="secondary"
                               style={{ fontSize: 12 }}

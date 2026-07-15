@@ -336,6 +336,8 @@ export type CreateDraftPayload = {
 
 export type ModelType = "text" | "image";
 
+export type ApiFormat = "openai" | "grsai";
+
 export type ModelConfig = {
   id: number;
   name: string;
@@ -343,6 +345,8 @@ export type ModelConfig = {
   provider: string;
   model_name: string;
   base_url: string;
+  api_path: string;
+  api_format: ApiFormat;
   has_api_key: boolean;
   is_default: boolean;
 };
@@ -353,6 +357,8 @@ export type ModelConfigPayload = {
   provider: string;
   model_name: string;
   base_url: string;
+  api_path: string;
+  api_format: ApiFormat;
   api_key: string;
   is_default: boolean;
 };
