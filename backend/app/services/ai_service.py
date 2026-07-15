@@ -82,6 +82,7 @@ class ImageAiClient(Protocol):
         model_config: ModelConfig,
         api_key: str,
         prompt: str,
+        size: str | None = None,
         reference_images: list[str] | None = None,
     ) -> dict[str, Any]:
         ...
@@ -282,7 +283,7 @@ class OpenAICompatibleImageClient:
         style: str,
     ) -> dict[str, Any]:
         return self.generate_image(
-            model_config=model_config, api_key=api_key, prompt=f"{prompt}\nStyle: {style or 'clean XHS cover'}",
+            model_config=model_config, api_key=api_key, prompt=f"{prompt}\nStyle: {style or 'clean XHS cover'}", size=size,
         )
 
     def generate_image(
@@ -291,6 +292,7 @@ class OpenAICompatibleImageClient:
         model_config: ModelConfig,
         api_key: str,
         prompt: str,
+        size: str | None = None,
         reference_images: list[str] | None = None,
     ) -> dict[str, Any]:
         from backend.app.services.image_strategies import get_strategy
@@ -302,6 +304,7 @@ class OpenAICompatibleImageClient:
         body = strategy.build_request(
             model_name=model_config.model_name,
             prompt=prompt,
+            size=size,
             reference_images=reference_images,
         )
         try:

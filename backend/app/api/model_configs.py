@@ -151,7 +151,7 @@ def test_model_config(
             resp = http_requests.post(
                 f"{base_url}/{api_path.lstrip('/')}",
                 headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-                json=strategy.build_request(model_name=config.model_name, prompt="test", size="256x256"),
+                json=strategy.build_request(model_name=config.model_name, prompt="test", size="1024x1024"),
                 timeout=30,
             )
         else:

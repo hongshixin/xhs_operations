@@ -56,6 +56,7 @@ class GenerateCoverRequest(BaseModel):
 
 class GenerateImageRequest(BaseModel):
     prompt: str = Field(min_length=1, max_length=2000)
+    size: str = Field(default="", max_length=32)
     reference_images: list[str] = Field(default_factory=list)
     save_to_assets: bool = True
 
@@ -448,6 +449,7 @@ def generate_image(
             model_config=model_config,
             api_key=api_key,
             prompt=payload.prompt,
+            size=payload.size or None,
             reference_images=payload.reference_images or None,
         ),
     )
