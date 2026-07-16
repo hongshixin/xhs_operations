@@ -1,10 +1,14 @@
 import {
+  ApiOutlined,
+  ArrowDownOutlined,
+  ArrowUpOutlined,
   CloudServerOutlined,
   DatabaseOutlined,
   DesktopOutlined,
   HddOutlined,
   ReloadOutlined,
   ThunderboltOutlined,
+  WifiOutlined,
 } from "@ant-design/icons";
 import {
   Alert,
@@ -94,7 +98,28 @@ export function SystemStatsPage() {
     );
   }
 
-  const { memory, cpu, storage, database } = stats;
+  const memory = stats.memory ?? { system_total_mb: 0, system_used_mb: 0, system_free_mb: 0, system_used_pct: 0, process_rss_mb: 0, process_vms_mb: 0 };
+  const cpu = stats.cpu ?? { cpu_pct: 0, cpu_count: 0, uptime_seconds: 0 };
+  const storage = stats.storage ?? { db_size_mb: null, storage_size_mb: 0, disk_total_gb: 0, disk_used_gb: 0, disk_free_gb: 0, disk_used_pct: 0 };
+  const database = stats.database ?? { notes: 0, note_assets: 0, note_comments: 0, ai_drafts: 0, ai_generated_assets: 0, accounts: 0, publish_jobs: 0, tasks_total: 0, tasks_by_status: {} };
+  const network = stats.network ?? {
+    sent_total_mb: 0, recv_total_mb: 0,
+    send_rate_kbps: 0, recv_rate_kbps: 0,
+    packets_sent: 0, packets_recv: 0,
+    errin: 0, errout: 0, dropin: 0, dropout: 0,
+    connections: -1, interfaces: [],
+  };
+
+  function fmtRate(kbps: number): string {
+    if (kbps >= 1024) return `${(kbps / 1024).toFixed(1)} MB/s`;
+    return `${kbps.toFixed(1)} KB/s`;
+  }
+
+  function fmtNum(n: number): string {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+    return String(n);
+  }
 
   // 任务状态表格
   const taskRows = Object.entries(database.tasks_by_status || {}).map(([status, cnt]) => ({
@@ -118,7 +143,7 @@ export function SystemStatsPage() {
       <PageHeader
         eyebrow="System"
         title="系统监控"
-        description="实时查看内存、CPU、磁盘占用及数据库各表记录数。"
+        description="实时查看内存、CPU、磁盘、网络流量及数据库各表记录数。"
         action={
           <div style={{ display: "flex", gap: 8 }}>
             <Button
@@ -339,6 +364,129 @@ export function SystemStatsPage() {
                 <Text strong>{(database.tasks_total ?? 0).toLocaleString()}</Text>
               </div>
             </div>
+          </Card>
+        </Col>
+        {/* ===== 网络流量 ===== */}
+        <Col xs={24} md={14}>
+          <Card
+            title={<span><WifiOutlined style={{ marginRight: 6 }} />网络流量</span>}
+            style={cardStyle}
+          >
+            {/* 实时速率 */}
+            <Row gutter={12} style={{ marginBottom: 16 }}>
+              <Col span={12}>
+                <Card size="small" style={{ ...innerCardStyle, borderLeft: "3px solid #22c55e" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                    <ArrowDownOutlined style={{ color: "#22c55e", fontSize: 12 }} />
+                    <Text type="secondary" style={{ fontSize: 12 }}>下行速率</Text>
+                  </div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: "#22c55e" }}>
+                    {fmtRate(network.recv_rate_kbps)}
+                  </div>
+                </Card>
+              </Col>
+              <Col span={12}>
+                <Card size="small" style={{ ...innerCardStyle, borderLeft: "3px solid #3b82f6" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                    <ArrowUpOutlined style={{ color: "#3b82f6", fontSize: 12 }} />
+                    <Text type="secondary" style={{ fontSize: 12 }}>上行速率</Text>
+                  </div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: "#3b82f6" }}>
+                    {fmtRate(network.send_rate_kbps)}
+                  </div>
+                </Card>
+              </Col>
+            </Row>
+
+            {/* 累计流量 */}
+            <Row gutter={12} style={{ marginBottom: 16 }}>
+              <Col span={8}>
+                <Statistic
+                  title={<Text type="secondary" style={{ fontSize: 12 }}>累计下行</Text>}
+                  value={network.recv_total_mb}
+                  suffix="MB"
+                  valueStyle={{ fontSize: 13 }}
+                />
+              </Col>
+              <Col span={8}>
+                <Statistic
+                  title={<Text type="secondary" style={{ fontSize: 12 }}>累计上行</Text>}
+                  value={network.sent_total_mb}
+                  suffix="MB"
+                  valueStyle={{ fontSize: 13 }}
+                />
+              </Col>
+              <Col span={8}>
+                <Statistic
+                  title={<Text type="secondary" style={{ fontSize: 12 }}>活跃连接</Text>}
+                  value={network.connections >= 0 ? network.connections : "-"}
+                  valueStyle={{ fontSize: 13 }}
+                />
+              </Col>
+            </Row>
+
+            {/* 包/错误/丢包 */}
+            <Row gutter={12}>
+              <Col span={6}>
+                <Statistic
+                  title={<Text type="secondary" style={{ fontSize: 11 }}>收包</Text>}
+                  value={fmtNum(network.packets_recv)}
+                  valueStyle={{ fontSize: 13 }}
+                />
+              </Col>
+              <Col span={6}>
+                <Statistic
+                  title={<Text type="secondary" style={{ fontSize: 11 }}>发包</Text>}
+                  value={fmtNum(network.packets_sent)}
+                  valueStyle={{ fontSize: 13 }}
+                />
+              </Col>
+              <Col span={6}>
+                <Statistic
+                  title={<Text type="secondary" style={{ fontSize: 11 }}>错误</Text>}
+                  value={network.errin + network.errout}
+                  valueStyle={{ fontSize: 13, color: (network.errin + network.errout) > 0 ? "#f59e0b" : undefined }}
+                />
+              </Col>
+              <Col span={6}>
+                <Statistic
+                  title={<Text type="secondary" style={{ fontSize: 11 }}>丢包</Text>}
+                  value={network.dropin + network.dropout}
+                  valueStyle={{ fontSize: 13, color: (network.dropin + network.dropout) > 0 ? "#ef4444" : undefined }}
+                />
+              </Col>
+            </Row>
+          </Card>
+        </Col>
+
+        {/* ===== 网卡列表 ===== */}
+        <Col xs={24} md={10}>
+          <Card
+            title={<span><ApiOutlined style={{ marginRight: 6 }} />网络接口</span>}
+            style={cardStyle}
+          >
+            {network.interfaces.length === 0 ? (
+              <Text type="secondary">无可用网卡</Text>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {network.interfaces.map((nic) => (
+                  <Card key={nic.name} size="small" style={innerCardStyle}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                      <Text strong style={{ fontSize: 13 }}>{nic.name}</Text>
+                      <Tag color={nic.is_up ? "success" : "default"} style={{ margin: 0 }}>
+                        {nic.is_up ? "在线" : "离线"}
+                      </Tag>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <Text type="secondary" style={{ fontSize: 12 }}>{nic.ipv4 || "无 IP"}</Text>
+                      {nic.speed > 0 && (
+                        <Text type="secondary" style={{ fontSize: 12 }}>{nic.speed} Mbps</Text>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
           </Card>
         </Col>
       </Row>

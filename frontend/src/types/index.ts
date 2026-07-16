@@ -755,4 +755,18 @@ export type SystemStats = {
     tasks_total: number;
     tasks_by_status: Record<string, number>;
   };
+  network: {
+    sent_total_mb: number;
+    recv_total_mb: number;
+    send_rate_kbps: number;
+    recv_rate_kbps: number;
+    packets_sent: number;
+    packets_recv: number;
+    errin: number;
+    errout: number;
+    dropin: number;
+    dropout: number;
+    connections: number;
+    interfaces: { name: string; ipv4: string; is_up: boolean; speed: number }[];
+  };
 };

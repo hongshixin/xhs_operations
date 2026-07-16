@@ -5,8 +5,10 @@ import {
   EditOutlined,
   FileImageOutlined,
   KeyOutlined,
+  LeftOutlined,
   PlusOutlined,
   ReloadOutlined,
+  RightOutlined,
   RobotOutlined,
   StarOutlined,
 } from "@ant-design/icons";
@@ -82,6 +84,7 @@ export function ModelConfigPage() {
   const [testResults, setTestResults] = useState<Record<number, { status: string; message: string }>>({});
   const [hasExistingKey, setHasExistingKey] = useState(false);
   const [clearApiKey, setClearApiKey] = useState(false);
+  const [cardIndex, setCardIndex] = useState<Record<ModelType, number>>({ text: 0, image: 0 });
 
   const grouped = useMemo(
     () => ({
@@ -199,7 +202,16 @@ export function ModelConfigPage() {
     setMessage(null);
     try {
       await deleteModelConfig(configId);
-      setConfigs((current) => current.filter((c) => c.id !== configId));
+      setConfigs((current) => {
+        const next = current.filter((c) => c.id !== configId);
+        const deleted = current.find((c) => c.id === configId);
+        if (deleted) {
+          const type = deleted.model_type as ModelType;
+          const remaining = next.filter((c) => c.model_type === type).length;
+          setCardIndex((prev) => ({ ...prev, [type]: Math.min(prev[type], Math.max(0, remaining - 1)) }));
+        }
+        return next;
+      });
       if (editingId === configId) { setEditingId(null); setForm({ ...emptyForm, model_type: form.model_type }); }
       setMessage("配置已删除。");
     } catch {
@@ -443,142 +455,142 @@ export function ModelConfigPage() {
 
         <Col xs={24} lg={16}>
           <Row gutter={[16, 16]}>
-            {(["text", "image"] as ModelType[]).map((type) => (
-              <Col xs={24} md={12} key={type}>
-                <Card
-                  title={
-                    <Space>
-                      <ModelTypeIcon type={type} />
-                      <span>{typeLabel(type)}</span>
-                    </Space>
-                  }
-                  style={cardStyle}
-                >
-                  {isLoading ? (
-                    <div style={{ textAlign: "center", padding: 24 }}>
-                      <Spin tip="正在加载配置..." />
-                    </div>
-                  ) : grouped[type].length === 0 ? (
-                    <Empty
-                      image={
+            {(["text", "image"] as ModelType[]).map((type) => {
+              const list = grouped[type];
+              const idx = Math.min(cardIndex[type], Math.max(0, list.length - 1));
+              const config = list[idx];
+              return (
+                <Col xs={24} md={12} key={type}>
+                  <Card
+                    title={
+                      <Space>
                         <ModelTypeIcon type={type} />
-                      }
-                      description={
-                        <div>
-                          <Text strong>暂无{typeLabel(type)}</Text>
-                          <br />
-                          <Text type="secondary">
-                            保存一个配置后，AI 改写和生成流程就能读取默认模型。
+                        <span>{typeLabel(type)}</span>
+                      </Space>
+                    }
+                    extra={
+                      list.length > 0 && (
+                        <Space size={4}>
+                          <Button
+                            size="small"
+                            type="text"
+                            icon={<LeftOutlined />}
+                            disabled={idx === 0}
+                            onClick={() => setCardIndex((prev) => ({ ...prev, [type]: idx - 1 }))}
+                          />
+                          <Text type="secondary" style={{ fontSize: 12, minWidth: 40, textAlign: "center" }}>
+                            {idx + 1} / {list.length}
                           </Text>
-                        </div>
-                      }
-                    />
-                  ) : (
-                    <Space
-                      direction="vertical"
-                      style={{ width: "100%" }}
-                      size="middle"
-                    >
-                      {grouped[type].map((config) => (
-                        <Card
-                          key={config.id}
-                          size="small"
-                          style={{
-                            background: "#262626",
-                            borderColor: "#303030",
-                          }}
-                        >
-                          <Space
-                            style={{
-                              width: "100%",
-                              justifyContent: "space-between",
-                            }}
-                          >
-                            <Text strong>{config.name}</Text>
-                            {config.is_default && (
-                              <Tag
-                                icon={<StarOutlined />}
-                                color="blue"
-                              >
-                                默认
-                              </Tag>
-                            )}
-                          </Space>
-                          <div style={{ marginTop: 4, marginBottom: 4 }}>
-                            <Text>{config.model_name || "未填写模型名称"}</Text>
+                          <Button
+                            size="small"
+                            type="text"
+                            icon={<RightOutlined />}
+                            disabled={idx === list.length - 1}
+                            onClick={() => setCardIndex((prev) => ({ ...prev, [type]: idx + 1 }))}
+                          />
+                        </Space>
+                      )
+                    }
+                    style={cardStyle}
+                  >
+                    {isLoading ? (
+                      <div style={{ textAlign: "center", padding: 24 }}>
+                        <Spin tip="正在加载配置..." />
+                      </div>
+                    ) : list.length === 0 ? (
+                      <Empty
+                        image={<ModelTypeIcon type={type} />}
+                        description={
+                          <div>
+                            <Text strong>暂无{typeLabel(type)}</Text>
+                            <br />
+                            <Text type="secondary">保存一个配置后，AI 改写和生成流程就能读取默认模型。</Text>
                           </div>
-                          <div
-                            style={{
-                              marginTop: 8,
-                              marginBottom: 8,
-                            }}
-                          >
-                            <Text
-                              type="secondary"
-                              style={{ fontSize: 12, marginRight: 12 }}
-                            >
-                              {config.base_url || "未配置 Host"}
-                            </Text>
-                            <Tag color={config.api_format === "grsai" ? "purple" : "blue"} style={{ marginRight: 8 }}>
-                              {config.api_format === "grsai" ? "GrsAI" : "OpenAI"}
-                            </Tag>
-                            {config.api_path && (
-                              <Text type="secondary" style={{ fontSize: 12, marginRight: 12 }}>
-                                {config.api_path}
-                              </Text>
-                            )}
-                            <Text
-                              type="secondary"
-                              style={{ fontSize: 12 }}
-                            >
-                              {config.has_api_key
-                                ? "已保存 API Key"
-                                : "未保存 API Key"}
-                            </Text>
-                          </div>
-                          <Space size={4} wrap>
-                            <Button
-                              size="small"
-                              icon={<CheckCircleOutlined />}
-                              disabled={config.is_default}
-                              onClick={() => handleSetDefault(config)}
-                            >
-                              {config.is_default ? "当前默认" : "设为默认"}
-                            </Button>
-                            <Button
-                              size="small"
-                              icon={<ApiOutlined />}
-                              loading={testingId === config.id}
-                              onClick={() => void handleTest(config.id)}
-                            >
-                              检查
-                            </Button>
-                            <Button
-                              size="small"
-                              icon={<EditOutlined />}
-                              onClick={() => handleEdit(config)}
-                            >
-                              编辑
-                            </Button>
-                            <Popconfirm title="确定删除此模型配置？" onConfirm={() => void handleDelete(config.id)}>
-                              <Button size="small" danger icon={<DeleteOutlined />}>删除</Button>
-                            </Popconfirm>
-                          </Space>
-                          {testResults[config.id] && (
-                            <div style={{ marginTop: 6 }}>
-                              <Tag color={testResults[config.id].status === "ok" ? "success" : "error"}>
-                                {testResults[config.id].status === "ok" ? "连接正常" : "连接失败"}
-                              </Tag>
-                              <Text type="secondary" style={{ fontSize: 11 }}>{testResults[config.id].message}</Text>
-                            </div>
+                        }
+                      />
+                    ) : (
+                      <Card
+                        size="small"
+                        style={{
+                          background: "#262626",
+                          borderColor: config.is_default ? "#1668dc" : "#303030",
+                        }}
+                      >
+                        {/* 头：名称 + 默认标签 */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                          <Text strong style={{ fontSize: 14 }}>{config.name}</Text>
+                          {config.is_default && (
+                            <Tag icon={<StarOutlined />} color="blue" style={{ margin: 0 }}>默认</Tag>
                           )}
-                        </Card>
-                      ))}
-                    </Space>
-                  )}
-                </Card>
-              </Col>
-            ))}
+                        </div>
+
+                        {/* 模型名称 */}
+                        <div style={{ marginBottom: 8 }}>
+                          <Text type="secondary" style={{ fontSize: 11 }}>模型</Text>
+                          <div>
+                            <Text style={{ fontSize: 13 }}>{config.model_name || "未填写"}</Text>
+                          </div>
+                        </div>
+
+                        {/* Host + 路径 */}
+                        <div style={{ marginBottom: 8 }}>
+                          <Text type="secondary" style={{ fontSize: 11 }}>接口</Text>
+                          <div>
+                            <Text style={{ fontSize: 12, wordBreak: "break-all" }}>
+                              {config.base_url || "未配置 Host"}{config.api_path || ""}
+                            </Text>
+                          </div>
+                        </div>
+
+                        {/* Tags */}
+                        <div style={{ marginBottom: 12, display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          <Tag color={config.api_format === "grsai" ? "purple" : "blue"} style={{ margin: 0 }}>
+                            {config.api_format === "grsai" ? "GrsAI" : "OpenAI"}
+                          </Tag>
+                          <Tag color={config.has_api_key ? "green" : "default"} style={{ margin: 0 }}>
+                            {config.has_api_key ? "已配置 Key" : "无 Key"}
+                          </Tag>
+                        </div>
+
+                        {/* 测试结果 */}
+                        {testResults[config.id] && (
+                          <div style={{ marginBottom: 10 }}>
+                            <Tag color={testResults[config.id].status === "ok" ? "success" : "error"}>
+                              {testResults[config.id].status === "ok" ? "连接正常" : "连接失败"}
+                            </Tag>
+                            <Text type="secondary" style={{ fontSize: 11 }}>{testResults[config.id].message}</Text>
+                          </div>
+                        )}
+
+                        {/* 操作 */}
+                        <Space size={6} wrap>
+                          <Button
+                            size="small"
+                            icon={<CheckCircleOutlined />}
+                            disabled={config.is_default}
+                            onClick={() => handleSetDefault(config)}
+                          >
+                            {config.is_default ? "当前默认" : "设为默认"}
+                          </Button>
+                          <Button
+                            size="small"
+                            icon={<ApiOutlined />}
+                            loading={testingId === config.id}
+                            onClick={() => void handleTest(config.id)}
+                          >
+                            检查
+                          </Button>
+                          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(config)}>编辑</Button>
+                          <Popconfirm title="确定删除此模型配置？" onConfirm={() => void handleDelete(config.id)}>
+                            <Button size="small" danger icon={<DeleteOutlined />} />
+                          </Popconfirm>
+                        </Space>
+                      </Card>
+                    )}
+                  </Card>
+                </Col>
+              );
+            })}
           </Row>
         </Col>
       </Row>

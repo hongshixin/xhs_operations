@@ -32,6 +32,10 @@ _START_TIME = time.time()
 # 项目根目录（backend/app/api/system_stats.py → 上三级）
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
+# 上次采样的网络计数器（用于计算速率）
+_last_net_sample: dict = {}
+_last_net_time: float = 0.0
+
 
 def _bytes_to_mb(b: int) -> float:
     return round(b / 1024 / 1024, 2)
@@ -151,6 +155,81 @@ def _cpu_stats() -> dict:
     }
 
 
+def _bytes_to_kb(b: int) -> float:
+    return round(b / 1024, 2)
+
+
+def _net_stats() -> dict:
+    global _last_net_sample, _last_net_time
+
+    now = time.time()
+    counters = psutil.net_io_counters(pernic=False)  # 全局合计
+
+    sent_total_mb  = _bytes_to_mb(counters.bytes_sent)
+    recv_total_mb  = _bytes_to_mb(counters.bytes_recv)
+    packets_sent   = counters.packets_sent
+    packets_recv   = counters.packets_recv
+    errin          = counters.errin
+    errout         = counters.errout
+    dropin         = counters.dropin
+    dropout        = counters.dropout
+
+    # 计算实时速率（KB/s）
+    send_rate_kbps = 0.0
+    recv_rate_kbps = 0.0
+    if _last_net_sample and _last_net_time:
+        elapsed = now - _last_net_time
+        if elapsed > 0:
+            send_rate_kbps = _bytes_to_kb(counters.bytes_sent - _last_net_sample.get("bytes_sent", 0)) / elapsed
+            recv_rate_kbps = _bytes_to_kb(counters.bytes_recv - _last_net_sample.get("bytes_recv", 0)) / elapsed
+            send_rate_kbps = max(0.0, round(send_rate_kbps, 2))
+            recv_rate_kbps = max(0.0, round(recv_rate_kbps, 2))
+
+    # 保存本次采样
+    _last_net_sample = {"bytes_sent": counters.bytes_sent, "bytes_recv": counters.bytes_recv}
+    _last_net_time = now
+
+    # 网卡连接数
+    try:
+        connections = len(psutil.net_connections())
+    except Exception:
+        connections = -1
+
+    # 各网卡地址（过滤回环）
+    interfaces = []
+    try:
+        addrs = psutil.net_if_addrs()
+        stats = psutil.net_if_stats()
+        for nic, addr_list in addrs.items():
+            if nic.startswith("lo") or nic == "Loopback Pseudo-Interface 1":
+                continue
+            ipv4 = next((a.address for a in addr_list if a.family.name in ("AF_INET", "2")), None)
+            is_up = stats.get(nic, None)
+            interfaces.append({
+                "name":   nic,
+                "ipv4":   ipv4 or "",
+                "is_up":  is_up.isup if is_up else False,
+                "speed":  is_up.speed if is_up else 0,  # Mbps，0 表示未知
+            })
+    except Exception:
+        pass
+
+    return {
+        "sent_total_mb":   sent_total_mb,
+        "recv_total_mb":   recv_total_mb,
+        "send_rate_kbps":  send_rate_kbps,
+        "recv_rate_kbps":  recv_rate_kbps,
+        "packets_sent":    packets_sent,
+        "packets_recv":    packets_recv,
+        "errin":           errin,
+        "errout":          errout,
+        "dropin":          dropin,
+        "dropout":         dropout,
+        "connections":     connections,
+        "interfaces":      interfaces,
+    }
+
+
 def _db_stats(db: Session) -> dict:
     def count(model):
         try:
@@ -189,4 +268,5 @@ def get_stats(
         "cpu":      _cpu_stats(),
         "storage":  _storage_stats(db),
         "database": _db_stats(db),
+        "network":  _net_stats(),
     }
