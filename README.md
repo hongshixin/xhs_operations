@@ -156,8 +156,8 @@
 ### 安装依赖
 
 ```bash
-git clone https://github.com/cv-cat/XHS_ALL_IN_ONE.git
-cd XHS_SHOW/XHS_ALL_IN_ONE
+git clone https://github.com/hongshixin/xhs_operations.git
+cd xhs_operations
 
 pip install -r requirements.txt
 npm install
