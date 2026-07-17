@@ -25,6 +25,10 @@ class PlatformAccount(Base):
     profile_json: Mapped[str] = mapped_column(Text, default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=shanghai_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=shanghai_now, onupdate=shanghai_now)
+    # 账号池字段
+    last_used_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, default=None)
+    use_count: Mapped[int] = mapped_column(Integer, default=0)
+    cooldown_until: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, default=None)
 
 
 class AccountCookieVersion(Base):

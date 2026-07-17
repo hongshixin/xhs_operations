@@ -67,6 +67,24 @@ class XhsPcApiAdapter:
             api = XHS_Apis()
             return api.get_user_all_notes(user_url=user_url, cookies_str=self.cookies)
 
+    def get_search_hot_list(self) -> Any:
+        with direct_xhs_request_env():
+            from apis.xhs_pc_apis import XHS_Apis
+            api = XHS_Apis()
+            return api.get_search_hot_list(cookies_str=self.cookies)
+
+    def get_search_suggest(self, keyword: str) -> Any:
+        with direct_xhs_request_env():
+            from apis.xhs_pc_apis import XHS_Apis
+            api = XHS_Apis()
+            return api.get_search_suggest(keyword=keyword, cookies_str=self.cookies)
+
+    def get_search_recommend(self, keyword: str) -> Any:
+        with direct_xhs_request_env():
+            from apis.xhs_pc_apis import XHS_Apis
+            api = XHS_Apis()
+            return api.get_search_keyword(word=keyword, cookies_str=self.cookies)
+
     def get_self_info(self) -> Any:
         with direct_xhs_request_env():
             from apis.xhs_pc_apis import XHS_Apis
