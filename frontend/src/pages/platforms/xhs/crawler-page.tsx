@@ -171,6 +171,7 @@ export function XhsCrawlerPage() {
   const [timeSleep, setTimeSleep] = useState(1);
   const [fetchCommentsChecked, setFetchCommentsChecked] = useState(false);
   const [filters, setFilters] = useState({ sort_type_choice: 0, note_type: 0, note_time: 0, note_range: 0, pos_distance: 0, geo: "" });
+  const [qualityFilter, setQualityFilter] = useState({ min_likes: 0, min_collects: 0, min_comments: 0 });
   const [items, setItems] = useState<XhsDataCrawlItem[]>([]);
   const [successCount, setSuccessCount] = useState(0);
   const [failedCount, setFailedCount] = useState(0);
@@ -180,6 +181,20 @@ export function XhsCrawlerPage() {
   const [error, setError] = useState<string | null>(null);
 
   const pcAccounts = useMemo(() => accounts.filter((a) => a.platform === "xhs" && a.sub_type === "pc"), [accounts]);
+
+  const filteredItems = useMemo(() => {
+    const { min_likes, min_collects, min_comments } = qualityFilter;
+    if (!min_likes && !min_collects && !min_comments) return items;
+    return items.filter((item) => {
+      if (item.status === "failed") return true; // 失败项始终显示
+      const n = item.note;
+      if (!n) return true;
+      if (min_likes    && (n.likes    ?? 0) < min_likes)    return false;
+      if (min_collects && (n.collects ?? 0) < min_collects) return false;
+      if (min_comments && (n.comments ?? 0) < min_comments) return false;
+      return true;
+    });
+  }, [items, qualityFilter]);
 
   async function loadAccounts() {
     setIsLoadingAccounts(true);
@@ -286,15 +301,75 @@ export function XhsCrawlerPage() {
               <Col span={4}><Form.Item label="距离"><Select value={filters.pos_distance} onChange={(v) => setFilters((c) => ({ ...c, pos_distance: v }))} options={distanceOptions} /></Form.Item></Col>
               <Col span={4}><Form.Item label="Geo"><Input value={filters.geo} onChange={(e) => setFilters((c) => ({ ...c, geo: e.target.value }))} placeholder="经纬度" /></Form.Item></Col>
             </Row>
-          ) : (
-            <Form.Item label="笔记链接"><Input.TextArea value={urls} onChange={(e) => setUrls(e.target.value)} placeholder="每行一个链接，也可以用英文逗号分隔" rows={4} /></Form.Item>
+          ) : null}
+
+          {/* 质量过滤 —— 搜索和链接模式都生效 */}
+          <Row gutter={16} style={{ marginTop: mode === "search" ? 0 : 8 }}>
+            <Col span={24}>
+              <Form.Item
+                label={<Text strong>质量过滤（结果展示 & 导出时生效，0 表示不限）</Text>}
+                style={{ marginBottom: 0 }}
+              >
+                <Space size={16} wrap>
+                  <Space size={6}>
+                    <Text type="secondary" style={{ fontSize: 13 }}>最低点赞</Text>
+                    <InputNumber
+                      min={0}
+                      value={qualityFilter.min_likes}
+                      onChange={(v) => setQualityFilter((c) => ({ ...c, min_likes: v ?? 0 }))}
+                      placeholder="0"
+                      style={{ width: 100 }}
+                      prefix="≥"
+                    />
+                  </Space>
+                  <Space size={6}>
+                    <Text type="secondary" style={{ fontSize: 13 }}>最低收藏</Text>
+                    <InputNumber
+                      min={0}
+                      value={qualityFilter.min_collects}
+                      onChange={(v) => setQualityFilter((c) => ({ ...c, min_collects: v ?? 0 }))}
+                      placeholder="0"
+                      style={{ width: 100 }}
+                      prefix="≥"
+                    />
+                  </Space>
+                  <Space size={6}>
+                    <Text type="secondary" style={{ fontSize: 13 }}>最低评论</Text>
+                    <InputNumber
+                      min={0}
+                      value={qualityFilter.min_comments}
+                      onChange={(v) => setQualityFilter((c) => ({ ...c, min_comments: v ?? 0 }))}
+                      placeholder="0"
+                      style={{ width: 100 }}
+                      prefix="≥"
+                    />
+                  </Space>
+                  {(qualityFilter.min_likes > 0 || qualityFilter.min_collects > 0 || qualityFilter.min_comments > 0) && (
+                    <Button
+                      size="small"
+                      onClick={() => setQualityFilter({ min_likes: 0, min_collects: 0, min_comments: 0 })}
+                    >
+                      清除过滤
+                    </Button>
+                  )}
+                </Space>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {mode !== "search" && (
+            <Form.Item label="笔记链接" style={{ marginTop: 16 }}>
+              <Input.TextArea value={urls} onChange={(e) => setUrls(e.target.value)} placeholder="每行一个链接，也可以用英文逗号分隔" rows={4} />
+            </Form.Item>
           )}
 
           <Space>
             <Button type="primary" htmlType="submit" loading={isRunning} disabled={noPcAccount} icon={mode === "search" ? <SearchOutlined /> : <CloudDownloadOutlined />}>
               {isRunning ? "抓取中..." : "开始抓取"}
             </Button>
-            <Button icon={<FileExcelOutlined />} onClick={() => items.length && exportRowsToExcel(items)} disabled={!items.length}>导出 Excel</Button>
+            <Button icon={<FileExcelOutlined />} onClick={() => filteredItems.length && exportRowsToExcel(filteredItems)} disabled={!filteredItems.length}>
+            导出 Excel{filteredItems.length !== items.length ? `（${filteredItems.length} 条）` : ""}
+          </Button>
           </Space>
         </Form>
 
@@ -306,13 +381,27 @@ export function XhsCrawlerPage() {
         )}
       </Card>
 
-      <Card title={<Space><Title level={5} style={{ margin: 0 }}>抓取结果</Title><Text type="secondary">成功 {successCount} · 失败 {failedCount}{isRunning && progressMsg ? ` · ${progressMsg}` : ""}{isRunning ? " · 抓取中..." : ""}</Text></Space>}>
+      <Card title={
+        <Space>
+          <Title level={5} style={{ margin: 0 }}>抓取结果</Title>
+          <Text type="secondary">
+            成功 {successCount} · 失败 {failedCount}
+            {filteredItems.length !== items.length && items.length > 0
+              ? ` · 过滤后 ${filteredItems.length} 条`
+              : ""}
+            {isRunning && progressMsg ? ` · ${progressMsg}` : ""}
+            {isRunning ? " · 抓取中..." : ""}
+          </Text>
+        </Space>
+      }>
         {items.length === 0 && !isRunning ? (
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="执行抓取后，结果会显示在这里" />
+        ) : filteredItems.length === 0 ? (
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={`共抓取 ${items.length} 条，当前质量过滤条件下无符合结果，请降低过滤阈值`} />
         ) : (
           <Table<XhsDataCrawlItem>
             columns={columns}
-            dataSource={items}
+            dataSource={filteredItems}
             rowKey={(_, index) => `${index}`}
             size="small"
             pagination={{ pageSize: 50 }}

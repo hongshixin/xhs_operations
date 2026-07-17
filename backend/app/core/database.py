@@ -148,6 +148,22 @@ def _normalize_sqlite_datetime_storage(bind) -> None:
             )
         connection.execute(text("INSERT INTO app_migrations (name) VALUES ('sqlite_publish_scheduled_at_asia_shanghai_v1')"))
 
+        # 账号池字段
+        pool_applied = connection.execute(
+            text("SELECT name FROM app_migrations WHERE name = 'account_pool_fields_v1'")
+        ).first()
+        if not pool_applied:
+            if "platform_accounts" in table_names:
+                existing = {col["name"] for col in inspector.get_columns("platform_accounts")}
+                for col, typedef in [
+                    ("last_used_at",   "DATETIME"),
+                    ("use_count",      "INTEGER DEFAULT 0"),
+                    ("cooldown_until", "DATETIME"),
+                ]:
+                    if col not in existing:
+                        connection.execute(text(f"ALTER TABLE platform_accounts ADD COLUMN {col} {typedef}"))
+            connection.execute(text("INSERT INTO app_migrations (name) VALUES ('account_pool_fields_v1')"))
+
 
 def get_db():
     db = SessionLocal()

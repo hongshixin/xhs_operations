@@ -884,3 +884,18 @@ export async function fetchSystemStats(): Promise<import("../types").SystemStats
   const response = await http.get<import("../types").SystemStats>("/system/stats");
   return response.data;
 }
+
+export async function fetchXhsHotKeywords(accountId: number): Promise<{ total: number; items: { word: string; hot_value: number; rank: number; tag: string }[] }> {
+  const response = await http.get("/xhs/keywords/hot", { params: { account_id: accountId } });
+  return response.data;
+}
+
+export async function fetchXhsKeywordSuggest(accountId: number, keyword: string): Promise<{ keyword: string; total: number; items: { word: string; type: string }[] }> {
+  const response = await http.get("/xhs/keywords/suggest", { params: { account_id: accountId, keyword } });
+  return response.data;
+}
+
+export async function fetchXhsKeywordRecommend(accountId: number, keyword: string): Promise<{ keyword: string; total: number; items: { word: string }[] }> {
+  const response = await http.get("/xhs/keywords/recommend", { params: { account_id: accountId, keyword } });
+  return response.data;
+}

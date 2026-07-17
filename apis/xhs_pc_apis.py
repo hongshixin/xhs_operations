@@ -422,6 +422,44 @@ class XHS_Apis():
             msg = _log_api_error(e)
         return success, msg, res_json
 
+    def get_search_hot_list(self, cookies_str: str, proxies: dict = None):
+        """
+            获取小红书热搜榜
+            返回当前平台热门搜索词列表
+        """
+        res_json = None
+        try:
+            api = "/api/sns/web/v1/search/hot_list"
+            headers, cookies, data = generate_request_params(cookies_str, api, '', 'GET')
+            response = xhs_get(self.base_url + api, headers=headers, cookies=cookies, proxies=proxies, timeout=REQUEST_TIMEOUT)
+            res_json = response.json()
+            success, msg = res_json["success"], res_json["msg"]
+        except Exception as e:
+            success = False
+            msg = _log_api_error(e)
+        return success, msg, res_json
+
+    def get_search_suggest(self, keyword: str, cookies_str: str, proxies: dict = None):
+        """
+            获取搜索联想词（下拉补全）
+            :param keyword: 输入的关键词前缀
+            :param cookies_str: 你的cookies
+            返回联想关键词列表
+        """
+        res_json = None
+        try:
+            api = "/api/sns/web/v1/search/suggest"
+            params = {"keyword": urllib.parse.quote(keyword)}
+            splice_api = splice_str(api, params)
+            headers, cookies, data = generate_request_params(cookies_str, splice_api, '', 'GET')
+            response = xhs_get(self.base_url + splice_api, headers=headers, cookies=cookies, proxies=proxies, timeout=REQUEST_TIMEOUT)
+            res_json = response.json()
+            success, msg = res_json["success"], res_json["msg"]
+        except Exception as e:
+            success = False
+            msg = _log_api_error(e)
+        return success, msg, res_json
+
     def search_note(self, query: str, cookies_str: str, page=1, sort_type_choice=0, note_type=0, note_time=0, note_range=0, pos_distance=0, geo="", search_id=None, proxies: dict = None):
         """
             获取搜索笔记的结果
