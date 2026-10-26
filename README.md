@@ -10,7 +10,7 @@
 
 # XHS_ALL_IN_ONE
 
-**小红书一站式智能运营平台 — 采集、分析、AI 创作、自动发布，全链路闭环**
+**小红书一站式智能运营平台 — （这个仅供我个人学习）**
 
 [![Skills](https://img.shields.io/badge/skills-supported-success)](https://github.com/cv-cat/XhsSkills)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
@@ -22,13 +22,9 @@
 
 </div>
 
-> 市面上的小红书工具要么只能爬数据，要么只能发笔记，要么需要手动复制粘贴到 AI 平台再贴回来。
-> **XHS_ALL_IN_ONE 是第一个把「采集 → 内容库 → AI 改写 → 图片润色 → 一键发布 → 定时自动运营」全链路打通的开源平台。**
-> 一个浏览器标签页，完成别人用 5 个工具才能做的事。
-
 ---
 
-## 核心优势
+## 核心功能
 
 | | 传统方案 | XHS_ALL_IN_ONE |
 |---|---|---|
@@ -125,16 +121,10 @@
 | **通知系统** | Cookie 过期 / 任务失败自动通知、铃铛实时展示 |
 | **模型配置** | 支持任意 OpenAI 兼容 API（火山引擎、阿里云百炼、OpenAI 中转等） |
 
-### 平台扩展（规划中）
-
 | 平台 | 状态 |
 |------|------|
 | 小红书 (XHS) | ✅ 已实现 |
-| 抖音 (Douyin) | Coming Soon |
-| 快手 (Kuaishou) | Coming Soon |
-| 微博 (Weibo) | Coming Soon |
-| 闲鱼 (Xianyu) | Coming Soon |
-| 淘宝 (Taobao) | Coming Soon |
+
 
 ---
 
