@@ -6,7 +6,6 @@ import {
   DashboardOutlined,
   DatabaseOutlined,
   FileTextOutlined,
-  FireOutlined,
   KeyOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
@@ -53,13 +52,13 @@ import type { AppNotification } from "../../types";
 const { Sider, Header, Content } = Layout;
 const { Title, Text } = Typography;
 
+// 导航只展示已注册的页面，避免入口指向尚未实现的功能。
 const mainNavItems: MenuProps["items"] = [
   { key: "/platforms/xhs/dashboard", icon: <DashboardOutlined />, label: "总览" },
   { key: "/platforms/xhs/accounts", icon: <SafetyCertificateOutlined />, label: "账号矩阵" },
   { key: "/platforms/xhs/discovery", icon: <SearchOutlined />, label: "笔记发现" },
   { key: "/platforms/xhs/crawler", icon: <CloudDownloadOutlined />, label: "数据抓取" },
   { key: "/platforms/xhs/keywords", icon: <KeyOutlined />, label: "关键词组" },
-  { key: "/platforms/xhs/hot-keywords", icon: <FireOutlined />, label: "热词挖掘" },
   { key: "/platforms/xhs/analytics", icon: <BarChartOutlined />, label: "数据洞察" },
   { key: "/platforms/xhs/benchmarks", icon: <AimOutlined />, label: "竞品监控" },
   { key: "/platforms/xhs/image-studio", icon: <StarOutlined />, label: "图片工坊" },
