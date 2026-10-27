@@ -20,15 +20,16 @@ export function QrLoginPanel({ accountType, onConfirmed }: QrLoginPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [syncCreator, setSyncCreator] = useState(false);
   const confirmedRef = useRef(false);
+  const pollingRef = useRef(false);
 
-  function errorMessage(error: unknown): string {
+  function errorMessage(error: unknown, fallback = "二维码生成失败，请稍后重试。"): string {
     if (axios.isAxiosError(error)) {
       const detail = error.response?.data?.detail;
       if (typeof detail === "string" && detail) {
         return detail;
       }
     }
-    return "二维码生成失败，请稍后重试。";
+    return fallback;
   }
 
   async function startSession() {
@@ -59,8 +60,12 @@ export function QrLoginPanel({ accountType, onConfirmed }: QrLoginPanelProps) {
     }
 
     const interval = window.setInterval(async () => {
+      // 上一次轮询未完成时跳过本轮，防止确认响应被旧状态覆盖。
+      if (pollingRef.current) return;
+      pollingRef.current = true;
       try {
         const polled = await pollXhsLoginSession(session.session_id);
+        setError(null);
         setSession((current) => ({
           ...polled,
           qr_image_data_url: polled.qr_image_data_url ?? current?.qr_image_data_url
@@ -74,8 +79,10 @@ export function QrLoginPanel({ accountType, onConfirmed }: QrLoginPanelProps) {
           setStatusText("账号绑定成功");
           onConfirmed(polled.account);
         }
-      } catch {
-        setError("轮询登录状态失败，正在等待下一次尝试。");
+      } catch (caught) {
+        setError(errorMessage(caught, "轮询登录状态失败，请刷新二维码重试。"));
+      } finally {
+        pollingRef.current = false;
       }
     }, 2000);
 

@@ -801,7 +801,8 @@ export async function createXhsPcQrLoginSession(payload?: {
 }
 
 export async function createXhsCreatorQrLoginSession(): Promise<XhsQrLoginSession> {
-  const response = await http.post<XhsQrLoginSession>("/xhs/login-sessions/creator/qrcode");
+  // Creator 安全初始化可能进行多次设备会话重建，单独放宽二维码生成的请求时限。
+  const response = await http.post<XhsQrLoginSession>("/xhs/login-sessions/creator/qrcode", {}, { timeout: 300000 });
   return response.data;
 }
 
@@ -817,7 +818,9 @@ export async function sendXhsPhoneCode(payload: {
 }): Promise<{ session_id: number; status: string; message: string }> {
   const response = await http.post<{ session_id: number; status: string; message: string }>(
     `/xhs/login-sessions/${payload.sub_type}/phone/send-code`,
-    { phone: payload.phone, sync_creator: payload.sync_creator }
+    { phone: payload.phone, sync_creator: payload.sync_creator },
+    // Creator 可能需要多次重建设备会话，发验证码请求允许更长的初始化时间。
+    { timeout: payload.sub_type === "creator" ? 300000 : 120000 }
   );
   return response.data;
 }

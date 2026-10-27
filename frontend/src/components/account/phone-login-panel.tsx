@@ -1,5 +1,6 @@
 import { Alert, Button, Checkbox, Form, Input, Space, Typography } from "antd";
 import { MessageOutlined, CheckCircleOutlined } from "@ant-design/icons";
+import axios from "axios";
 import { useEffect, useState } from "react";
 
 import { confirmXhsPhoneLogin, sendXhsPhoneCode } from "../../lib/api";
@@ -25,6 +26,15 @@ export function PhoneLoginPanel({ accountType, onConfirmed }: PhoneLoginPanelPro
   const [error, setError] = useState<string | null>(null);
   const [syncCreator, setSyncCreator] = useState(false);
   const isCoolingDown = cooldownSeconds > 0;
+
+  function errorMessage(error: unknown, fallback: string): string {
+    // 后端区分设备初始化、验证码校验等错误，直接展示可读原因以便用户重试。
+    if (axios.isAxiosError(error)) {
+      const detail = error.response?.data?.detail;
+      if (typeof detail === "string" && detail) return detail;
+    }
+    return fallback;
+  }
 
   useEffect(() => {
     if (cooldownSeconds <= 0) {
@@ -58,8 +68,8 @@ export function PhoneLoginPanel({ accountType, onConfirmed }: PhoneLoginPanelPro
       setSessionId(result.session_id);
       setStatusText("验证码已发送，请查看手机短信");
       setCooldownSeconds(PHONE_CODE_COOLDOWN_SECONDS);
-    } catch {
-      setError("验证码发送失败。");
+    } catch (caught) {
+      setError(errorMessage(caught, "验证码发送失败。"));
     } finally {
       setIsSending(false);
     }
@@ -89,8 +99,8 @@ export function PhoneLoginPanel({ accountType, onConfirmed }: PhoneLoginPanelPro
         onConfirmed(result.account);
       }
       setStatusText("账号绑定成功");
-    } catch {
-      setError("验证码校验失败或已过期。");
+    } catch (caught) {
+      setError(errorMessage(caught, "验证码校验失败或已过期。"));
     } finally {
       setIsConfirming(false);
     }

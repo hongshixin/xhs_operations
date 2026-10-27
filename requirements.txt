@@ -1,5 +1,7 @@
 PyExecJS
 requests
+# 新版扫码登录使用与 Spider_XHS 一致的浏览器指纹 HTTP 会话。
+curl_cffi==0.15.0
 loguru
 python-dotenv
 retry

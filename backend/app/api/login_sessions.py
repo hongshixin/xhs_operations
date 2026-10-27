@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import io
 import json
+from functools import lru_cache
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -76,11 +77,15 @@ def _qr_data_url(qr_url: str) -> str:
     return f"data:image/png;base64,{encoded}"
 
 
+@lru_cache(maxsize=1)
 def get_pc_login_adapter() -> XhsPcLoginAdapter:
+    # 扫码创建与轮询是独立 HTTP 请求，复用适配器以保留同一设备签名会话。
     return XhsPcLoginAdapter()
 
 
+@lru_cache(maxsize=1)
 def get_creator_login_adapter() -> XhsCreatorLoginAdapter:
+    # Creator 的安全初始化状态同样必须跨请求保持到手机确认完成。
     return XhsCreatorLoginAdapter()
 
 
@@ -225,16 +230,20 @@ def login_session(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported login session")
 
     cookies, sync_creator = _load_temp_state(decrypt_text(session.encrypted_temp_cookies))
-    if session.sub_type == "pc":
-        if not session.code:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported login session")
-        result = pc_adapter.check_qrcode_status(session.qr_id, session.code, cookies)
-        account_sub_type = "pc"
-        user_info = pc_adapter.get_user_info(result["cookies"]) if result["status"] == "confirmed" else None
-    else:
-        result = creator_adapter.check_qrcode_status(session.qr_id, cookies)
-        account_sub_type = "creator"
-        user_info = creator_adapter.get_user_info(result["cookies"]) if result["status"] == "confirmed" else None
+    try:
+        if session.sub_type == "pc":
+            if not session.code:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported login session")
+            result = pc_adapter.check_qrcode_status(session.qr_id, session.code, cookies)
+            account_sub_type = "pc"
+            user_info = (result.get("user_info") or pc_adapter.get_user_info(result["cookies"])) if result["status"] == "confirmed" else None
+        else:
+            result = creator_adapter.check_qrcode_status(session.qr_id, cookies)
+            account_sub_type = "creator"
+            user_info = (result.get("user_info") or creator_adapter.get_user_info(result["cookies"])) if result["status"] == "confirmed" else None
+    except RuntimeError as exc:
+        # 将扫码会话错误交给前端展示，避免用户只看到“轮询中”而不知道该刷新二维码。
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
     session.status = result["status"]
     session.encrypted_temp_cookies = encrypt_text(
         _dump_temp_state(result["cookies"], sync_creator=sync_creator)
@@ -278,6 +287,9 @@ def pc_phone_send_code(
 ):
     try:
         result = adapter.create_phone_session(payload.phone)
+    except RuntimeError as exc:
+        # 保留平台可读的失败原因，方便区分验证码发送失败与设备会话初始化失败。
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to send phone code") from exc
     session = LoginSession(
@@ -317,6 +329,8 @@ def creator_phone_send_code(
 ):
     try:
         result = adapter.create_phone_session(payload.phone)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to send phone code") from exc
     session = LoginSession(
@@ -363,7 +377,10 @@ def _confirm_phone_login(
     try:
         cookies, stored_sync_creator = _load_temp_state(decrypt_text(session.encrypted_temp_cookies))
         result = adapter.confirm_phone_login(payload.phone, payload.code, cookies)
-        user_info = adapter.get_user_info(result["cookies"])
+        # 新版 SDK 在同一设备会话中验收用户信息；旧测试适配器仍可走兼容回退。
+        user_info = result.get("user_info") or adapter.get_user_info(result["cookies"])
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Phone login failed") from exc
 
