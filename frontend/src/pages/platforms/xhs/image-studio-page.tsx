@@ -65,6 +65,7 @@ export function XhsImageStudioPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isDescribing, setIsDescribing] = useState(false);
+  const [isPickerUploading, setIsPickerUploading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refPickerOpen, setRefPickerOpen] = useState(false);
@@ -180,6 +181,25 @@ export function XhsImageStudioPage() {
       setError("文件上传失败。");
     }
     return false; // prevent antd auto-upload
+  }
+
+  async function handlePickerUploadFile(file: File) {
+    // 参考图弹窗中的本地文件先入库，再使用可被后端解析的媒体 URL。
+    setIsPickerUploading(true);
+    setError(null);
+    try {
+      const uploaded = await uploadAssetFile(file);
+      setUserImages((prev) => [{
+        file_name: uploaded.file_name,
+        url: uploaded.download_url,
+        size: uploaded.size,
+      }, ...prev]);
+      handlePickerSelect(uploaded.download_url);
+    } catch {
+      setError("本地图片上传失败，请检查格式和文件大小。");
+    } finally {
+      setIsPickerUploading(false);
+    }
   }
 
   useEffect(() => {
@@ -669,6 +689,18 @@ export function XhsImageStudioPage() {
         width={640}
         destroyOnClose
       >
+        <Upload
+          accept=".jpg,.jpeg,.png,.gif,.webp"
+          showUploadList={false}
+          beforeUpload={(file) => {
+            void handlePickerUploadFile(file);
+            return false;
+          }}
+        >
+          <Button icon={<UploadOutlined />} loading={isPickerUploading} style={{ marginBottom: 16 }}>
+            选择本地图片
+          </Button>
+        </Upload>
         <Tabs
           defaultActiveKey="user_images"
           items={[
