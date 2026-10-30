@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "小红书运营平台 · 素材收集",
+  "version": "0.1.0",
+  "description": "从当前网页选择图片和视频，保存到本地素材库。",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["http://127.0.0.1:1314/*", "http://*/*", "https://*/*"],
+  "icons": { "128": "icon.png" },
+  "action": { "default_popup": "popup.html", "default_title": "收集素材", "default_icon": "icon.png" }
+}

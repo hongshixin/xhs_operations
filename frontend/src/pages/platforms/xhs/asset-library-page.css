@@ -1,0 +1,21 @@
+/* 素材库使用统一的间距和卡片层级，视觉重点留给素材本身。 */
+.asset-library-upload { margin-bottom: 16px; overflow: hidden; }
+.asset-library-browser { margin-bottom: 16px; }
+.asset-library-browser .ant-card-body { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.asset-library-upload .ant-upload-drag { border: 0; background: transparent; }
+.asset-library-upload-inner { display: flex; align-items: center; gap: 18px; padding: 22px 24px; text-align: left; }
+.asset-library-upload-inner > div { flex: 1; }
+.asset-library-upload-icon { display: grid; place-items: center; width: 54px; height: 54px; flex: none; border-radius: 16px; background: rgba(22, 104, 220, .12); color: #1668dc; font-size: 25px; }
+.asset-library-filter { margin-bottom: 22px; }
+.asset-library-heading { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+.asset-library-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
+.asset-library-card { overflow: hidden; }
+.asset-library-preview { position: relative; height: 174px; display: grid; place-items: center; overflow: hidden; }
+.asset-library-preview .ant-image, .asset-library-preview img, .asset-library-preview video { width: 100%; height: 174px; object-fit: cover; }
+.asset-library-source { position: absolute; top: 10px; left: 10px; margin: 0; }
+.asset-library-card-content { padding: 13px; }
+.asset-library-origin { display: block; margin: 0 0 10px; font-size: 12px; }
+.asset-library-title { display: block; margin-bottom: 8px; }
+.asset-library-meta { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 13px; font-size: 12px; opacity: .65; }
+.asset-library-pagination { margin-top: 24px; text-align: right; }
+@media (max-width: 640px) { .asset-library-upload-inner { flex-wrap: wrap; padding: 18px; } .asset-library-upload-inner > div { min-width: calc(100% - 72px); } .asset-library-upload-inner > button { width: 100%; } .asset-library-browser .ant-card-body { align-items: stretch; flex-direction: column; } }

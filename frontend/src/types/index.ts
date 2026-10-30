@@ -423,8 +423,23 @@ export type GenerateImageResult = {
 
 export type UserImageFile = {
   file_name: string;
+    title?: string;
   url: string;
   size: number;
+    created_at?: string;
+};
+
+export type LibraryAsset = {
+  id: string;
+  source: "upload" | "ai" | "note" | "web";
+  source_platform?: string;
+  source_url?: string;
+  asset_type: "image" | "video";
+  title: string;
+  url: string;
+  local_path: string;
+  created_at: string;
+  size: number | null;
 };
 
 export type DescribeImagePayload = {

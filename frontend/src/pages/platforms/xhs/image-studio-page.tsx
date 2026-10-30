@@ -29,6 +29,7 @@ import {
   Upload,
 } from "antd";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { PageHeader } from "../../../components/layout/app-shell";
 import {
@@ -42,6 +43,7 @@ import {
 } from "../../../lib/api";
 import { formatShanghaiTime } from "../../../lib/time";
 import type { GeneratedImageAsset, UserImageFile } from "../../../types";
+import "./asset-library-page.css";
 
 const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -56,6 +58,7 @@ function isRenderableImage(value: string): boolean {
 }
 
 export function XhsImageStudioPage() {
+  const navigate = useNavigate();
   const [assets, setAssets] = useState<GeneratedImageAsset[]>([]);
   const [userImages, setUserImages] = useState<UserImageFile[]>([]);
   const [prompt, setPrompt] = useState("");
@@ -171,8 +174,13 @@ export function XhsImageStudioPage() {
   async function handleUploadFile(file: File) {
     try {
       const uploaded = await uploadAssetFile(file);
+      if (uploaded.duplicate) {
+        setMessage("这张图片已在素材库中，直接使用现有文件即可。");
+        return false;
+      }
       const newItem: UserImageFile = {
         file_name: uploaded.file_name,
+        title: uploaded.original_name,
         url: uploaded.download_url,
         size: uploaded.size,
       };
@@ -189,8 +197,9 @@ export function XhsImageStudioPage() {
     setError(null);
     try {
       const uploaded = await uploadAssetFile(file);
-      setUserImages((prev) => [{
+      setUserImages((prev) => uploaded.duplicate ? prev : [{
         file_name: uploaded.file_name,
+        title: uploaded.original_name,
         url: uploaded.download_url,
         size: uploaded.size,
       }, ...prev]);
@@ -599,18 +608,21 @@ export function XhsImageStudioPage() {
             ),
             children: (
               <>
-                <div style={{ marginBottom: 16 }}>
-                  <Upload
-                    accept="image/*"
+                {/* 与素材库共用上传视觉，避免本地图库出现孤立的小按钮。 */}
+                <Card className="asset-library-upload" styles={{ body: { padding: 0 } }}>
+                  <Upload.Dragger
+                    accept=".jpg,.jpeg,.png,.gif,.webp"
                     showUploadList={false}
-                    beforeUpload={(file) => {
-                      void handleUploadFile(file);
-                      return false;
-                    }}
+                    beforeUpload={(file) => { void handleUploadFile(file); return false; }}
                   >
-                    <Button icon={<UploadOutlined />}>上传图片</Button>
-                  </Upload>
-                </div>
+                    <div className="asset-library-upload-inner">
+                      <span className="asset-library-upload-icon"><UploadOutlined /></span>
+                      <div><Text strong>上传本地图片</Text><div><Text type="secondary">拖入图片或点击选择；所有素材也可在素材库统一查看</Text></div></div>
+                      <Button type="primary" icon={<UploadOutlined />}>选择图片</Button>
+                    </div>
+                  </Upload.Dragger>
+                </Card>
+                <Button type="link" style={{ paddingLeft: 0, marginBottom: 12 }} onClick={() => navigate("/platforms/xhs/assets")}>前往素材库，查看全部来源 →</Button>
                 {userImages.length === 0 ? (
                   <Empty
                     image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -624,35 +636,32 @@ export function XhsImageStudioPage() {
                         <Card
                           size="small"
                           hoverable
-                          styles={{ body: { padding: 8 } }}
+                          className="asset-library-card"
+                          styles={{ body: { padding: 0 } }}
                         >
                           <div
+                            className="asset-library-preview"
                             style={{
-                              height: 120,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              marginBottom: 6,
-                              overflow: "hidden",
-                              borderRadius: 4,
-                              background: "#1a1a1a",
+                              height: 174,
                             }}
                           >
                             <Image
-                              alt={img.file_name}
+                              alt={img.title || img.file_name}
                               src={img.url}
                               style={{
-                                maxHeight: 120,
-                                objectFit: "contain",
+                                width: "100%",
+                                height: 174,
+                                objectFit: "cover",
                               }}
                             />
                           </div>
+                          <div className="asset-library-card-content">
                           <Text
                             strong
                             ellipsis
                             style={{ fontSize: 12, display: "block" }}
                           >
-                            {img.file_name}
+                            {img.title || img.file_name}
                           </Text>
                           <Text type="secondary" style={{ fontSize: 10 }}>
                             {(img.size / 1024).toFixed(1)} KB
@@ -669,6 +678,7 @@ export function XhsImageStudioPage() {
                           >
                             删除
                           </Button>
+                          </div>
                         </Card>
                       </Col>
                     ))}

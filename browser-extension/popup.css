@@ -1,0 +1,25 @@
+:root { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; color: #232b36; }
+* { box-sizing: border-box; }
+body { width: 362px; margin: 0; background: #f6f8fb; }
+header { display: flex; align-items: baseline; justify-content: space-between; padding: 16px 18px; background: #fff; border-bottom: 1px solid #e8edf3; }
+.brand { font-size: 17px; font-weight: 700; }
+.subtitle { font-size: 11px; color: #7c8998; }
+main { padding: 16px; }
+section { background: #fff; padding: 14px; border: 1px solid #e8edf3; border-radius: 12px; box-shadow: 0 3px 12px #26384b0a; }
+.panel-title { font-weight: 700; }
+p { color: #6d7886; font-size: 12px; line-height: 1.6; }
+input { display: block; width: 100%; height: 38px; padding: 0 10px; margin: 12px 0; border: 1px solid #dce4ed; border-radius: 8px; outline-color: #1668dc; }
+button { border: 0; border-radius: 8px; cursor: pointer; font: inherit; }
+button:disabled { opacity: .55; cursor: wait; }
+.primary { width: 100%; padding: 10px 12px; background: #1668dc; color: #fff; font-weight: 600; }
+.quiet { background: none; color: #1668dc; font-size: 12px; padding: 4px; }
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
+.toolbar strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.toolbar span { color: #768494; font-size: 12px; }
+.media-list { max-height: 370px; overflow-y: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+.media-item { position: relative; display: block; height: 94px; border: 2px solid transparent; border-radius: 8px; overflow: hidden; background: #f0f3f7; cursor: pointer; }
+.media-item:has(input:checked) { border-color: #1668dc; }
+.media-item img { width: 100%; height: 100%; object-fit: cover; }
+.media-item input { position: absolute; z-index: 1; width: 17px; height: 17px; top: 3px; right: 4px; margin: 0; accent-color: #1668dc; }
+.video-mark { position: absolute; left: 5px; bottom: 5px; padding: 2px 5px; border-radius: 4px; background: #000a; color: white; font-size: 10px; }
+#status { min-height: 18px; margin-top: 10px; color: #536273; font-size: 12px; line-height: 1.4; }

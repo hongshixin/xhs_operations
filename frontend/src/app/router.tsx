@@ -20,6 +20,7 @@ import { XhsKeywordsPage } from "../pages/platforms/xhs/keywords-page";
 import { XhsLibraryPage } from "../pages/platforms/xhs/library-page";
 import { XhsMonitoringPage } from "../pages/platforms/xhs/monitoring-page";
 import { XhsImageStudioPage } from "../pages/platforms/xhs/image-studio-page";
+import { XhsAssetLibraryPage } from "../pages/platforms/xhs/asset-library-page";
 import { XhsPublishPage } from "../pages/platforms/xhs/publish-page";
 import { XhsVideoStudioPage } from "../pages/platforms/xhs/video-studio-page";
 import { XhsSectionPage } from "../pages/platforms/xhs/xhs-section-page";
@@ -71,6 +72,7 @@ export function AppRouter() {
           <Route path="/platforms/xhs/drafts" element={<XhsDraftsPage />} />
           <Route path="/platforms/xhs/benchmarks" element={<XhsBenchmarksPage />} />
           <Route path="/platforms/xhs/image-studio" element={<XhsImageStudioPage />} />
+          <Route path="/platforms/xhs/assets" element={<XhsAssetLibraryPage />} />
           <Route path="/platforms/xhs/video-studio" element={<XhsVideoStudioPage />} />
           <Route path="/platforms/xhs/publish" element={<XhsPublishPage />} />
           <Route path="/platforms/xhs/auto-ops" element={<AutoOpsPage />} />

@@ -71,6 +71,11 @@ def create_refresh_token(user_id: int) -> str:
     return _create_token(user_id, timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS), "refresh")
 
 
+def create_capture_token(user_id: int) -> str:
+    # 浏览器插件只得到素材导入权限，不能用此令牌访问普通用户接口。
+    return _create_token(user_id, timedelta(days=30), "capture")
+
+
 def decode_token(token: str) -> dict:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

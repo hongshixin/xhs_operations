@@ -66,6 +66,7 @@ import type {
   SendDraftToPublishPayload,
   Tag,
   UserImageFile,
+  LibraryAsset,
   TagPayload,
   TaskRecord,
   XhsNoteSearchResponse,
@@ -364,10 +365,12 @@ export async function downloadMediaFile(downloadUrl: string, fileName: string): 
 
 export type UploadedFile = {
   file_name: string;
+  original_name: string;
   file_path: string;
   download_url: string;
   asset_type: "image" | "video";
   size: number;
+  duplicate: boolean;
 };
 
 export async function uploadAssetFile(file: File): Promise<UploadedFile> {
@@ -463,8 +466,8 @@ export async function createDraftFromNote(payload: CreateDraftPayload): Promise<
   return response.data;
 }
 
-export async function fetchDrafts(platform = "xhs"): Promise<Paginated<Draft>> {
-  const response = await http.get<Paginated<Draft>>("/drafts", { params: { platform } });
+export async function fetchDrafts(platform = "xhs", pageSize = 20): Promise<Paginated<Draft>> {
+  const response = await http.get<Paginated<Draft>>("/drafts", { params: { platform, page_size: pageSize } });
   return response.data;
 }
 
@@ -565,6 +568,16 @@ export async function generateImageWithAi(payload: GenerateImagePayload): Promis
 
 export async function fetchUserImages(): Promise<{ items: UserImageFile[] }> {
   const response = await http.get<{ items: UserImageFile[] }>("/files/images");
+  return response.data;
+}
+
+export async function fetchAssetLibrary(): Promise<{ items: LibraryAsset[]; total: number }> {
+  const response = await http.get<{ items: LibraryAsset[]; total: number }>("/files/library");
+  return response.data;
+}
+
+export async function startCapturePair(): Promise<{ code: string; expires_in_seconds: number }> {
+  const response = await http.post<{ code: string; expires_in_seconds: number }>("/files/capture/pair/start");
   return response.data;
 }
 

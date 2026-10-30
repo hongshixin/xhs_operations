@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>收集素材</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header><span class="brand">素材收集</span><span class="subtitle">保存到本地素材库</span></header>
+    <main>
+      <section id="pair-panel" hidden>
+        <div class="panel-title">连接本地素材库</div>
+        <p>先到平台的“素材库”点击“连接浏览器插件”，再输入配对码。</p>
+        <input id="pair-code" placeholder="输入配对码" autocomplete="off" />
+        <button id="pair-button" class="primary">连接</button>
+      </section>
+      <section id="capture-panel" hidden>
+        <div class="toolbar"><strong id="page-title">当前网页</strong><button id="refresh-button" class="quiet">重新扫描</button></div>
+        <div class="toolbar"><span id="count">扫描中…</span><button id="select-all" class="quiet">全选</button></div>
+        <div id="media-list" class="media-list"></div>
+        <button id="collect-button" class="primary">保存选中素材</button>
+      </section>
+      <div id="status" role="status" aria-live="polite"></div>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>
